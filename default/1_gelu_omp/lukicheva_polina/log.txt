@@ -1,4 +1,1 @@
-/home/crazyproger/sandbox/cuda-ai-2026/default/1_gelu_omp/lukicheva_polina/gelu_omp.cpp: In function ‘std::vector<float> GeluOMP(const std::vector<float>&)’:
-/home/crazyproger/sandbox/cuda-ai-2026/default/1_gelu_omp/lukicheva_polina/gelu_omp.cpp:23:64: error: ‘el’ cannot be used as a function
-   23 |         output[i] = 0.5f * el * (1 + fast_tanh(M_2_SQRTPI * el (1.f +  CONST_V * el * el)));
-      |                                                             ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+Incorrect results, test input_100_100.bin, difference 0.8562407918831382
