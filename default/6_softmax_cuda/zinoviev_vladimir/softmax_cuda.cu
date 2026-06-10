@@ -98,7 +98,7 @@ public:
         }
 
         cudaMemcpyAsync(this->d_in, input.data(), memSize, cudaMemcpyHostToDevice, stream);
-        SoftmaxCUDAKernel<<<row_size, BLOCK_SIZE>>>(d_in, d_out, col_size);
+        SoftmaxCUDAKernel<<<row_size, BLOCK_SIZE, 2 * BLOCK_SIZE, stream>>>(d_in, d_out, col_size);
         cudaMemcpyAsync(output.data(), d_out, memSize, cudaMemcpyDeviceToHost, stream);
 
         cudaStreamSynchronize(stream);
