@@ -52,13 +52,15 @@ extern "C" __global__ void layerNormKernel(const float* x, float* y, const float
 module = SourceModule(cLayerNormKernel)
 pyLayerNorm = module.get_function("layerNormKernel")
 
-def layernorm_pycuda(x, gamma, beta, row_size, eps=1e-5):
+def layernorm_pycuda(input, gamma, beta, row_size, eps=1e-5):
 
-    x = np.asarray(x, dtype=np.float32)
+    x = np.asarray(input, dtype=np.float32)
     gamma = np.asarray(gamma, dtype=np.float32)
     beta = np.asarray(beta, dtype=np.float32)
 
-    batch_size, row = x.shape
+    batch_size = np.int32(x.size / row_size)
+    #batch_size = x.shape
+    #print(batch_size)
 
     x_gpu = drv.mem_alloc(x.nbytes)
     y_gpu = drv.mem_alloc(x.nbytes)
@@ -69,11 +71,12 @@ def layernorm_pycuda(x, gamma, beta, row_size, eps=1e-5):
     drv.memcpy_htod(gamma_gpu, gamma)
     drv.memcpy_htod(beta_gpu, beta)
 
-    block_size = min(row, 512)
-    grid_size = batch_size
+    block_size = np.int32(min(row_size, 512))
+    grid_size = (int(batch_size),int(batch_size), 1)
+    block_size = (int(block_size), 1, 1)
 
-    pyLayerNorm(x_gpu, y_gpu, gamma_gpu, beta_gpu, np.int32(row), np.float32(eps),
-        block=(block_size, 1, 1), grid=(grid_size, 1))
+    pyLayerNorm(x_gpu, y_gpu, gamma_gpu, beta_gpu, np.int32(row_size), np.float32(eps),
+        block=block_size, grid=grid_size)
 
     y = np.empty_like(x)
     drv.memcpy_dtoh(y, y_gpu)
