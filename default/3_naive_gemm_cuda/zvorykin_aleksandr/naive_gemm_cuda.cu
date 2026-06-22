@@ -1,112 +1,73 @@
 #include "naive_gemm_cuda.h"
 
 #include <cuda_runtime.h>
-#include <cstdint>
 
-// CUDA constants
-constexpr int s_TileSize = 32;
-constexpr int s_VectorWidth = 4;
+// CUDA tile size
+static const int s_TileSize = 16;
 
 // Anonymous namespace
 namespace
 {    
-    __global__ void OptimizedGemm(const float *a, const float *b, float *c, int n) 
+    __global__ void naiveGemmImpl(const float *a, const float *b, float *c, int n)
     {
-        __shared__ float tileA[s_TileSize][s_TileSize];
-        __shared__ float tileB[s_TileSize][s_TileSize];
-        
-        int bx = blockIdx.x, by = blockIdx.y;
-        int tx = threadIdx.x, ty = threadIdx.y;
-        
-        float sum0 = 0.0f, sum1 = 0.0f, sum2 = 0.0f, sum3 = 0.0f;
-        
-        int row = by * s_TileSize + ty;
-        int col = (bx * s_TileSize + tx) * s_VectorWidth;
-        
-        if (row >= n) return;
-        
-        for (int t = 0, tSize = 0; t < (n + s_TileSize - 1) / s_TileSize; ++t, tSize += s_TileSize)
+        __shared__ float sharedA[s_TileSize][s_TileSize];
+        __shared__ float sharedB[s_TileSize][s_TileSize];
+
+        int tX = threadIdx.x;
+        int tY = threadIdx.y;
+        int cRow = blockIdx.y * s_TileSize + tY;
+        int cCol = blockIdx.x * s_TileSize + tX;
+
+        if (cRow >= n || cCol >= n) return;
+
+        float sum = 0.0f;
+        int numTiles = (n + s_TileSize - 1) / s_TileSize;
+
+        for (int t = 0, tile = 0; t < numTiles; ++t, tile += s_TileSize)
         {
-            if (tSize + tx < n)
-                tileA[ty][tx] = a[row * n + tSize + tx];
-            else
-                tileA[ty][tx] = 0.0f;
-            
-            int b_row = tSize + ty;
-            if (b_row < n && col + 3 < n && ((uintptr_t)(&b[b_row * n + col]) & 0xF) == 0)
-            {
-                float4 b_vec = reinterpret_cast<const float4*>(&b[b_row * n + col])[0];
-                tileB[ty][tx * 4 + 0] = b_vec.x;
-                tileB[ty][tx * 4 + 1] = b_vec.y;
-                tileB[ty][tx * 4 + 2] = b_vec.z;
-                tileB[ty][tx * 4 + 3] = b_vec.w;
-            }
-            else if (b_row < n) 
-            {
-                for (int v = 0; v < s_VectorWidth && col + v < n; ++v)
-                    tileB[ty][tx * 4 + v] = b[b_row * n + col + v];
-            }
-            else 
-            {
-                for (int v = 0; v < s_VectorWidth; ++v)
-                    tileB[ty][tx * 4 + v] = 0.0f;
-            }
-            
+            sharedA[tY][tX] = (tX + tile < n) ? a[cRow * n + tX + tile] : 0.0f;
+            sharedB[tY][tX] = (tY + tile < n) ? b[(tY + tile) * n + cCol] : 0.0f;
             __syncthreads();
-            
-            #pragma unroll
+
             for (int k = 0; k < s_TileSize; ++k)
-            {
-                float a_val = tileA[ty][k];
-                sum0 += a_val * tileB[k][tx * 4 + 0];
-                sum1 += a_val * tileB[k][tx * 4 + 1];
-                sum2 += a_val * tileB[k][tx * 4 + 2];
-                sum3 += a_val * tileB[k][tx * 4 + 3];
-            }
-            
+                sum += sharedA[tY][k] * sharedB[k][tX];
             __syncthreads();
         }
-        
-        if (col < n) c[row * n + col] = sum0;
-        if (col + 1 < n) c[row * n + col + 1] = sum1;
-        if (col + 2 < n) c[row * n + col + 2] = sum2;
-        if (col + 3 < n) c[row * n + col + 3] = sum3;
+
+        c[cRow * n + cCol] = sum;
     }
 }
 
 std::vector<float> NaiveGemmCUDA(const std::vector<float>& a,
                                  const std::vector<float>& b,
-                                 int n)
+                                 int n) 
 {
     // Place your implementation here
-    
-    size_t dataSize = static_cast<size_t>(n) * n;
+    const float* aData = a.data();
+    const float* bData = b.data();
+    const int dataSize = n * n;
 
-    float *devA = nullptr;
-    cudaMalloc(&devA, dataSize * sizeof(float));
-    
-    float *devB = nullptr;
-    cudaMalloc(&devB, dataSize * sizeof(float));
-    
-    float *devC = nullptr;
-    cudaMalloc(&devC, dataSize * sizeof(float));
+    float* deviceA = nullptr;
+    cudaMalloc(&deviceA, dataSize * sizeof(float));
+    float* deviceB = nullptr;
+    cudaMalloc(&deviceB, dataSize * sizeof(float));
+    float* deviceC = nullptr;
+    cudaMalloc(&deviceC, dataSize * sizeof(float));
 
-    cudaMemcpy(devA, a.data(), dataSize * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(devB, b.data(), dataSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceA, aData, dataSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(deviceB, bData, dataSize * sizeof(float), cudaMemcpyHostToDevice);
 
-    int blocksX = (n + s_TileSize * s_VectorWidth - 1) / (s_TileSize * s_VectorWidth);
-    int blocksY = (n + s_TileSize - 1) / s_TileSize;
-    dim3 grid(blocksX, blocksY);
-    dim3 threadsPerBlock(s_TileSize / s_VectorWidth, s_TileSize);    
-    OptimizedGemm<<<grid, threadsPerBlock>>>(devA, devB, devC, n);
-    cudaDeviceSynchronize();
+    dim3 threadsPerBlock(s_TileSize, s_TileSize);
+    dim3 blockDims((n + s_TileSize - 1) / s_TileSize, (n + s_TileSize - 1) / s_TileSize);
+    naiveGemmImpl<<<blockDims, threadsPerBlock>>>(deviceA, deviceB, deviceC, n);
 
     std::vector<float> c(dataSize);
-    cudaMemcpy(c.data(), devC, dataSize * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
+    cudaMemcpy(c.data(), deviceC, dataSize * sizeof(float), cudaMemcpyDeviceToHost);
 
-    cudaFree(devA);
-    cudaFree(devB);
-    cudaFree(devC);
+    cudaFree(deviceA);
+    cudaFree(deviceB);
+    cudaFree(deviceC);
 
     return c;
 }
