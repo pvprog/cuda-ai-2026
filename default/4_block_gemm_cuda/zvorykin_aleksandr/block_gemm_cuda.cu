@@ -20,7 +20,7 @@ namespace
         }
     }
     
-    __global__ void gemmV4(const DataType* __restrict__ a, const DataType* __restrict__ b, float* __restrict__ c, int n) 
+    __global__ void blockGemmImpl(const DataType* __restrict__ a, const DataType* __restrict__ b, float* __restrict__ c, int n) 
     {
         int warpI = (blockIdx.x * 4) + (threadIdx.x >> 5);
         int warpJ = blockIdx.y;
@@ -87,7 +87,7 @@ std::vector<float> BlockGemmCUDA(const std::vector<float>& a, const std::vector<
     dim3 gridDim((n + kWmmaSize - 1) / kWmmaSize, (n + kWmmaSize - 1) / kWmmaSize, 1);
     dim3 blockDim(blockSize, 1, 1);
     
-    gemmV4<<<gridDim, blockDim>>>(aHalfDev, bHalfDev, cDev, n);
+    blockGemmImpl<<<gridDim, blockDim>>>(aHalfDev, bHalfDev, cDev, n);
     
     cudaDeviceSynchronize();
     
