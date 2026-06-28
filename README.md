@@ -549,6 +549,7 @@ One may use numba or C strings to write CUDA kernels.
 |default|zinoviev_vladimir|0.1590|2|
 |default|zemskov_roman|0.1691|9|
 |default|malinin_nikita|0.1698|14|
+|default|vikhrev_ivan|0.1708|17|
 |default|smirnov_denis|0.1727|1|
 |default|pisarevsky_vadim|0.1736|5|
 |default|salnikov_nikolay|0.1750|16|
@@ -559,7 +560,6 @@ One may use numba or C strings to write CUDA kernels.
 |default|chekmaryov_petr|0.1817|13|
 |default|pinegina_natalia|0.1931|4|
 |default|bolshakova_viktoriya|BUILD FAILED|-|
-|default|vikhrev_ivan|RUN FAILED|-|
 
 ## 7_layernorm_pycuda (8192x16384 elements)
 |Group|Name|Result|Rank|
@@ -589,7 +589,7 @@ One may use numba or C strings to write CUDA kernels.
 |-----|----|------|-----|
 |default|belov_dmitry|1/7|40|
 |default|bolshakova_viktoriya|5/7|132|
-|default|chekmaryov_petr|**7/7**|**320**|
+|default|chekmaryov_petr|**7/7**|**319**|
 |default|chervyakov_ivan|**7/7**|**307**|
 |default|ermilov_dmitry|**7/7**|**310**|
 |default|kireev_daniil|0/7|0|
@@ -601,25 +601,25 @@ One may use numba or C strings to write CUDA kernels.
 |default|malinin_nikita|**7/7**|**273**|
 |default|novozhilov_mikhail|4/7|131|
 |default|pigasin_dmitry|**7/7**|**321**|
-|default|pinegina_natalia|**7/7**|**297**|
-|default|pisarevsky_vadim|6/7|333|
+|default|pinegina_natalia|**7/7**|**296**|
+|default|pisarevsky_vadim|6/7|332|
 |default|pushchin_alexey|0/7|0|
 |default|putilin_artyom|4/7|109|
 |default|rodygin_vadim|3/7|112|
-|default|salnikov_nikolay|**7/7**|**257**|
-|default|smirnov_denis|**7/7**|**375**|
+|default|salnikov_nikolay|**7/7**|**256**|
+|default|smirnov_denis|**7/7**|**374**|
 |default|suchkov_vladislav|3/7|69|
-|default|vikhrev_ivan|6/7|261|
+|default|vikhrev_ivan|**7/7**|**301**|
 |default|volkovskiy_pavel|2/7|59|
 |default|zemskov_roman|**7/7**|**352**|
 |default|zinoviev_vladimir|**7/7**|**407**|
-|default|zlobin_george|**7/7**|**271**|
-|default|znamenskiy_mikhail|**7/7**|**335**|
-|default|zvorykin_aleksandr|**7/7**|**300**|
+|default|zlobin_george|**7/7**|**270**|
+|default|znamenskiy_mikhail|**7/7**|**334**|
+|default|zvorykin_aleksandr|**7/7**|**299**|
 
-Passed: 15
+Passed: 16
 
-**Total Passed: 15**
+**Total Passed: 16**
 
 ---
 *Maximum Score: 448 (64 per task)*
